@@ -1,0 +1,27 @@
+[project]
+name = "homework-grading-automation"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "Pavel", email = "60060559+pyrogn@users.noreply.github.com" }
+]
+dependencies = [
+    "github>=1.2.7",
+    "requests>=2.32.3",
+    "tqdm>=4.66.5",
+    "gql>=3.5.0",
+    "requests-toolbelt>=1.0.0",
+    "python-dotenv>=1.0.1",
+]
+readme = "README.md"
+requires-python = ">= 3.8"
+
+[project.scripts]
+"homework-grading-automation" = "homework_grading_automation:main"
+
+[tool.rye]
+managed = true
+virtual = true
+dev-dependencies = [
+    "pytest>=8.3.3",
+]
