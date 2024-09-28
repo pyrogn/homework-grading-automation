@@ -42,7 +42,7 @@ CACHE_FILE = "completed_repos.json"
 # ORG_NAME = "AI-DevTools24"
 ORG_NAME = "test-organization12341234"
 SOURCE_BRANCH_NAME = "task_01"
-GITEXERCISES_MAX_CONCURRENT_REQUESTS = 5
+GITEXERCISES_MAX_CONCURRENT_REQUESTS = 5  # possibly no spam protection at our scale
 
 
 def load_completed_repos():
@@ -117,6 +117,14 @@ async def process_repositories(repositories: list[dict]):
         return results
 
 
+def has_readme(repo: dict) -> bool:
+    if "readmeFiles" in repo and "entries" in repo["readmeFiles"]:
+        for entry in repo["readmeFiles"]["entries"]:
+            if entry["type"] == "blob" and entry["name"].lower().startswith("readme"):
+                return True
+    return False
+
+
 async def process_repository(session: aiohttp.ClientSession, repo: dict) -> dict:
     async with semaphore:
         result = {
@@ -127,7 +135,7 @@ async def process_repository(session: aiohttp.ClientSession, repo: dict) -> dict
             "pull_request_exists": bool(repo["pullRequests"]["totalCount"]),
             "license_exists": repo["licenseInfo"] is not None,
             "gitignore_exists": repo["hasGitignore"] is not None,
-            "readme_exists": repo["hasReadme"] is not None,
+            "readme_exists": has_readme(repo),
             "email_exists": False,
         }
 
@@ -157,11 +165,11 @@ async def process_repository(session: aiohttp.ClientSession, repo: dict) -> dict
 def update_reports(repositories, results):
     g = Github(TOKEN)
 
-    for repo, result in zip(repositories, results):
+    for repo_name, repo in repositories.items():
         if repo["name"] in original_completed_repos:
             logger.info(f"Skipping {repo['name']} (already completed)")
             continue
-
+        result = results.get(repo_name)
         try:
             existing_report = repo.get("reportJson")
 
@@ -200,11 +208,15 @@ def update_reports(repositories, results):
             logger.error(f"Error updating report for {repo['name']}: {str(e)}")
 
 
+def list_to_dict(lst, key_col):
+    return {item[key_col]: item for item in lst}
+
+
 async def main():
     query = gql("""
         query($org: String!, $cursor: String, $branch: String!) {
           organization(login: $org) {
-            repositories(first: 100, after: $cursor) {
+            repositories(first: 50, after: $cursor) {
               pageInfo {
                 hasNextPage
                 endCursor
@@ -223,8 +235,13 @@ async def main():
                 hasGitignore: object(expression: "HEAD:.gitignore") {
                   id
                 }
-                hasReadme: object(expression: "HEAD:README.md") {
-                  id
+                readmeFiles: object(expression: "HEAD:") {
+                  ... on Tree {
+                    entries {
+                      name
+                      type
+                    }
+                  }
                 }
                 reportJson: object(expression: "HEAD:report.json") {
                   ... on Blob {
@@ -271,8 +288,10 @@ async def main():
 
     results = await process_repositories(all_repos)
 
+    # !!!! should join all_repos and results
+
     # must be synchronous to respect GitHub's limits
-    update_reports(all_repos, results)
+    update_reports(list_to_dict(all_repos, "name"), list_to_dict(results, "repo"))
 
 
 if __name__ == "__main__":
