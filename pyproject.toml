@@ -6,12 +6,13 @@ authors = [
     { name = "Pavel", email = "60060559+pyrogn@users.noreply.github.com" }
 ]
 dependencies = [
-    "github>=1.2.7",
     "requests>=2.32.3",
     "tqdm>=4.66.5",
     "gql>=3.5.0",
     "requests-toolbelt>=1.0.0",
     "python-dotenv>=1.0.1",
+    "pygithub>=2.4.0",
+    "aiohttp>=3.10.7",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
