@@ -288,8 +288,6 @@ async def main():
 
     results = await process_repositories(all_repos)
 
-    # !!!! should join all_repos and results
-
     # must be synchronous to respect GitHub's limits
     update_reports(list_to_dict(all_repos, "name"), list_to_dict(results, "repo"))
 
